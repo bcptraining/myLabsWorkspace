@@ -1,0 +1,19 @@
+{
+    "deviceId": "234567",
+    "timestamp": "2022-03-01T15:32:22.000Z",
+    "data": {
+        "temperature": 23.4,
+        "humidity": 21.6,
+        "pressure": 1012.3,
+        "airQuality": {
+            "pm25": 30,
+            "pm10": 59,
+            "o3": 21,
+            "co": 73
+        },
+        "location": {
+            "latitude": 37.7849,
+            "longitude": -121.4194
+        }
+    }
+}

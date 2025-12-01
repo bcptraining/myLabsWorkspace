@@ -1,0 +1,21 @@
+{
+    "brand": "Apple",
+    "model": "MacBook Pro 14",
+    "product_id": "X101",
+    "features": [
+      {
+        "chip_name": "M1 Pro chip"
+      },
+      {
+        "display_name": "14-inch Liquid Retina XDR display"
+      },
+      {
+        "processing": "10-core CPU, 16-core GPU"
+      }
+            ],
+    "reviews": {
+      "averageRating": 4.8,
+      "numberOfReviews": 5000
+            },
+    "ports": [ "Thunderbolt 4 (USB-C), MagSafe 3, HDMI, USB-A"]
+  }

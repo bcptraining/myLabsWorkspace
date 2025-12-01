@@ -1,0 +1,67 @@
+{
+  "laptopSales": [
+    {
+      "brand": "Apple",
+      "model": "MacBook Pro 14",
+      "product_id":"X101", 
+      "features": [
+        {
+          "chip_name": "M1 Pro chip"
+        },
+        {
+          "display_name": "14-inch Liquid Retina XDR display"
+        },
+        {
+          "processing": "10-core CPU, 16-core GPU"
+        }
+              ],
+      "reviews": {
+        "averageRating": 4.8,
+        "numberOfReviews": 5000
+      },
+      "ports": [ "Thunderbolt 4 (USB-C), MagSafe 3, HDMI, USB-A"]
+    },
+    {
+      "brand": "Dell",
+      "model": "Inspiron 15",
+        "product_id":"X102", 
+      "features": [
+        {
+          "chip_name": "Intel Core i7 processor"
+        },
+        {
+          "display_name": "15.6-inch Full HD display"
+        },
+        {
+          "processing": "8GB RAM, 512GB SSD"
+        }
+              ],
+      "reviews": {
+        "averageRating": 4.5,
+        "numberOfReviews": 3000
+      },
+      "ports": [ "USB-C, HDMI, USB-A, RJ-45"]
+    },
+    {
+      "brand": "Lenovo",
+      "model": "ThinkPad X1 Carbon",
+      "product_id":"X103", 
+      "features": [
+        {
+          "chip_name": "Intel Core i7 processor"
+        },
+        {
+          "display_name": "14-inch OLED display"
+        },
+        {
+          "processing": "16GB RAM, 1TB SSD"
+        }
+            ],
+      "reviews": {
+        "averageRating": 4.7,
+        "numberOfReviews": 4000
+      },
+      "ports": [ "Thunderbolt 4 (USB-C), HDMI, USB-A, RJ-45"]
+    }
+  ]
+}
