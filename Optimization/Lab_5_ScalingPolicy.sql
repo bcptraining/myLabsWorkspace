@@ -1,0 +1,42 @@
+--SCALING OUT                                 
+  
+CREATE OR REPLACE WAREHOUSE SCALE_LAB_WH
+WITH 
+WAREHOUSE_SIZE = 'XSMALL'  
+AUTO_SUSPEND = 5
+AUTO_RESUME = TRUE
+INITIALLY_SUSPENDED = FALSE 
+MIN_CLUSTER_COUNT = 1
+MAX_CLUSTER_COUNT = 5
+SCALING_POLICY = 'ECONOMY'
+COMMENT = 'Create Date :1-Jan-2099, 
+           Created by: Sujith Nair,
+           Use-Case:Snowflake Scaling';
+
+
+ ALTER WAREHOUSE SCALE_LAB_WH SET SCALING_POLICY=STANDARD;
+                                  
+
+
+SELECT * FROM HRMS.HR.EMPLOYEES;
+
+
+SHOW WAREHOUSES;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
