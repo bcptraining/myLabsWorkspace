@@ -92,7 +92,7 @@ SELECT METADATA$FILENAME,MAX(METADATA$FILE_ROW_NUMBER) FROM
 EXT_EMPLOYEES 
 GROUP BY METADATA$FILENAME 
 ORDER BY 2 DESC; 
--- This table function give you metadtaa about the files
+-- This table function give you metadata about the files
 SELECT * FROM 
 TABLE(INFORMATION_SCHEMA.EXTERNAL_TABLE_FILES('EXT_EMPLOYEES')); 
 -- This table function give you metadtaa about the files and their registration status
