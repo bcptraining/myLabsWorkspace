@@ -1,6 +1,9 @@
 --  Context
 USE DATABASE HRMS; 
 USE SCHEMA HR; 
+
+-- look at the stage
+desc stage AWS_ET_CSV_STAGE ;
 -------------------------
 -- Create external table
 -------------------------
@@ -40,6 +43,7 @@ SELECT SYSTEM$EXTERNAL_TABLE_PIPE_STATUS('EXT_EMPLOYEES_REFRESH');  -- Tells if 
 ALTER EXTERNAL TABLE EXT_EMPLOYEES_REFRESH SET AUTO_REFRESH=TRUE;  -- triggers a metadata true-up to s3
 SELECT COUNT(*) FROM EXT_EMPLOYEES_REFRESH; --60   
 SELECT * FROM EXT_EMPLOYEES_REFRESH; 
+SELECT * FROM HRMS.HR.EXT_EMPLOYEES_REFRESH; 
 -- Automatic Registration (similar to a pipe)
 SHOW EXTERNAL TABLES LIKE 'EXT_EMPLOYEES_REFRESH';  -- presence of NOTIFICATION_CHANNEL indicates AUTO_REFRESH=TRUE
 -- aws: Configure the prefix/suffix/Destination (=NOTIFICATION_CHANNEL) on the bucket
