@@ -40,7 +40,7 @@ LIST @AWS_ET_PARQUET_STAGE;
 
 
 -------------------------
--- Generate partquet files of employee data using the external table from lab2 (uses csv files) 
+-- Generate parquet files of employee data using the external table from lab2 (uses csv files) 
 -------------------------
 -- This does not provide the real column names
 -- COPY INTO @HRMS.HR.AWS_ET_PARQUET_STAGE 

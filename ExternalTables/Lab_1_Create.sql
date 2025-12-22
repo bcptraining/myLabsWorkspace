@@ -76,7 +76,7 @@ FILE_FORMAT = CSV_ET_FILEFORMAT;
 
 
 DESCRIBE EXTERNAL TABLE EXT_EMPLOYEES; 
-
+SHOW COLUMNS IN TABLE EXT_EMPLOYEES;
 ---------------------------
 --  Explore data and metadata
 ---------------------------
