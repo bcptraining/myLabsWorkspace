@@ -30,6 +30,10 @@ STORAGE_ALLOWED_LOCATIONS = ('s3://vdw-dev-ingest/loadingdatalabs/',
   's3://vdw-dev-ingest/loadingdatalabs/snowpipe/json/');
 
   desc integration udemy_mc_a1_si; -- Original: YJB79755_SFCRole=3_ppKckAbuWSWBkwPlylG3vKykvSs=
+ 
+  SHOW STORAGE INTEGRATIONS LIKE 'UDEMY_MC_ET_PARQUET_SI';
+    SHOW STORAGE INTEGRATIONS ;
+
 
 
 ----------------------

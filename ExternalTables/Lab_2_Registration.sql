@@ -28,7 +28,7 @@ LOCATION=@AWS_ET_CSV_STAGE
 AUTO_REFRESH= TRUE 
 PATTERN='.*employees.*[.]csv' 
 FILE_FORMAT = CSV_ET_FILEFORMAT; 
-
+desc  table  EXT_EMPLOYEES_REFRESH;
 --------------------
 --  Get info about an External Table and the notification process (listening for sqs messages -- like a  "pipe") 
 --------------------

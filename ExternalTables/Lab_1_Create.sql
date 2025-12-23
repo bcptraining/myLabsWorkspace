@@ -34,6 +34,9 @@ STORAGE_INTEGRATION = udemy_mc_a1_si
 -- URL = 's3://learn2cloud-snowflake/external_table/csv/' 
 URL = 's3://vdw-dev-ingest/loadingdatalabs/labcsv/'
 FILE_FORMAT = CSV_ET_FILEFORMAT; 
+SHOW STORAGE INTEGRATIONS LIKE 'udemy_mc_a1_si';
+
+
 LIST @AWS_ET_CSV_STAGE; 
  -- query the data to confirm
 show stages in account;
