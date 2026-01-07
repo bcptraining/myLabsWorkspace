@@ -1,3 +1,8 @@
+-- Create context
+create database HRMS;
+-- create schema HR;
+create schema PIPE;
+
 --  Set Context
 USE DATABASE HRMS;
 create schema pipe;

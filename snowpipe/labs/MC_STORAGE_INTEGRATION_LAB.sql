@@ -6,12 +6,7 @@ ENABLED = TRUE
 STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::133202620729:role/SNOWFLAKE-S3-FULL-ACCESS'
 STORAGE_ALLOWED_LOCATIONS = ('s3://learn2cloud-snowflake/')
 STORAGE_BLOCKED_LOCATIONS = ('s3://learn2cloud-snowflake/secret_folder/')
-COMMENT = 'Create Storage integration to connect Snowflake with AWS' 
-
-
-
-
-;
+COMMENT = 'Create Storage integration to connect Snowflake with AWS';
 
 
 ALTER STORAGE INTEGRATION AWS_S3_INT SET ENABLED = TRUE;

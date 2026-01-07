@@ -40,6 +40,7 @@ create OR REPLACE stage sales_stage
     file_format = (format_name = sales_file_format)
     URL = 's3://vdw-dev-ingest/loadingdatalabs/snowpipe/csv/'
     storage_integration = udemy_mc_a1_si;
+    PATTERN = '.*sales.*\\.csv';  -- <== Not allowed in the stage
 
   LIST @sales_stage;
 
@@ -65,6 +66,27 @@ FROM (
 )
 FILE_FORMAT = (format_name = sales_file_format)
 PATTERN = '.*sale.*\\.csv$';
+
+
+--  Use the copy statement to reload after setting up a new Snowflake Trial  account 
+COPY INTO sales
+(
+  OrderDate, Category, City, Country, CustomerName, Discount, OrderID,
+  PostalCode, Product, Profit, Quantity, Region, Sales, Segment,
+  ShipDate, ShipMode, State,
+  SOURCE_FILE_NAME, SOURCE_FILE_ROW_NUMBER
+)
+FROM (
+  SELECT t.$1, t.$2, t.$3, t.$4, t.$5, t.$6, t.$7,
+         t.$8, t.$9, t.$10, t.$11, t.$12, t.$13, t.$14,
+         t.$15, t.$16, t.$17,
+         METADATA$FILENAME AS SOURCE_FILE_NAME,
+         METADATA$FILE_ROW_NUMBER AS SOURCE_FILE_ROW_NUMBER
+  FROM @sales_stage t
+)
+FILE_FORMAT = (FORMAT_NAME = sales_file_format)
+PATTERN = '.*sale.*\\.csv$';
+
 
 
   desc pipe sales_pipe;
