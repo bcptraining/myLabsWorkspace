@@ -1,6 +1,6 @@
 USE DATABASE HRMS;
 
-
+-- create schema ETL;
 USE SCHEMA ETL;
 
 
@@ -10,8 +10,14 @@ TYPE = JSON;
 
 CREATE OR REPLACE STAGE HRMS.ETL.AWS_ETL_JSON_STAGE
 STORAGE_INTEGRATION = udemy_mc_a1_si
-URL = 'S3://vdw-dev-ingest/loadingdatalabs/JSON/'
+URL = 'S3://vdw-dev-ingest/loadingdatalabs/json/'
 FILE_FORMAT = JSON_ETL_FILEFORMAT;
+
+desc integration udemy_mc_a1_si;
+
+list @HRMS.ETL.AWS_ETL_JSON_STAGE;
+
+select * from @HRMS.ETL.AWS_ETL_JSON_STAGE;
 CREATE or replace STORAGE INTEGRATION udemy_mc_a1_si
 TYPE = EXTERNAL_STAGE
 STORAGE_PROVIDER = S3
@@ -259,7 +265,7 @@ AS
 SELECT         
         EMPLOYEE_INFO:employee_id::STRING                             AS EMPLOYEE_ID,
         EMPLOYEE_INFO:employee_name::STRING                           AS EMPLOYEE_NAME,        
-        EMPLOYEE_INFO:position::STRING                                AS JOB_RANK,       
+        EMPLOYEE_INFO:position::STRING                                AS JOB_RANK,       COMMISSION_PCT
         EMPLOYEE_INFO:phone_numbers[0]::STRING                        AS PRIMARY_PHONE_NUMBER,
         EMPLOYEE_INFO:phone_numbers[1]::STRING                        AS SECONDARY_PHONE_NUMBER,
         EMPLOYEE_INFO:address.street::STRING                          AS STREET_ADDRESS, 
