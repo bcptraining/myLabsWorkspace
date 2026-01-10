@@ -1,0 +1,61 @@
+S3/IAM authentication approach & setup
+* Approach 1:I tried to create a ploicy and attach to the athena workgroup but that is not currently supported (Jan 2026)
+* Approach 2 (works): Create a role and ssign it to particular users (no bucket policies needed)
+*   IAM Example Policy: 
+        Role Name: AthenaEmployeeDataReadPolicy 
+        Permissions: 
+        {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ReadParquetData",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject"
+            ],
+            "Resource": "arn:aws:s3:::vdw-dev-iceberg/employees/*"
+        },
+        {
+            "Sid": "ListParquetBucket",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket"
+            ],
+            "Resource": "arn:aws:s3:::vdw-dev-iceberg",
+            "Condition": {
+                "StringLike": {
+                    "s3:prefix": [
+                        "employees/*"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "WriteAthenaResults",
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject"
+            ],
+            "Resource": "arn:aws:s3:::dea-c01-backend/athena_output/*"
+        },
+        {
+            "Sid": "ListAthenaOutputBucket",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket"
+            ],
+            "Resource": "arn:aws:s3:::dea-c01-backend",
+            "Condition": {
+                "StringLike": {
+                    "s3:prefix": [
+                        "athena_output/*"
+                    ]
+                }
+            }
+        }
+    ]
+}
+
+
+   

@@ -46,27 +46,17 @@ select * from DEPARTMENTS;
 -- Create 2nd hybrid table
 CREATE OR REPLACE HYBRID TABLE EMPLOYEES 
 ( 
-EMPLOYEE_ID         
-FIRST_NAME          
-LAST_NAME           
-EMAIL               
-phone_number        
-HIRE_DATE           
-JOB_ID              
-SALARY              
-NUMBER(6)   PRIMARY KEY, 
-VARCHAR(20), 
-VARCHAR(25), 
-VARCHAR(25)  UNIQUE, 
-VARCHAR(20), 
-DATE, 
-VARCHAR(10), 
-NUMBER(8,2) , 
-COMMISSION_PCT      NUMBER(2,2), 
-MANAGER_ID          
-NUMBER(6) , 
-DEPARTMENT_ID       
-NUMBER(4)   FOREIGN KEY REFERENCES 
+EMPLOYEE_ID    NUMBER(6)   PRIMARY KEY,      
+FIRST_NAME     VARCHAR(20),      
+LAST_NAME      VARCHAR(25),      
+EMAIL          VARCHAR(25)  UNIQUE,      
+phone_number   VARCHAR(20),      
+HIRE_DATE      DATE,      
+JOB_ID         VARCHAR(10),     
+SALARY         NUMBER(6) ,     
+COMMISSION_PCT NUMBER(2,2), 
+MANAGER_ID     NUMBER(6) , 
+DEPARTMENT_ID  NUMBER(4)   FOREIGN KEY REFERENCES 
 DEPARTMENTS(DEPARTMENT_ID), 
 INDEX index_hire_date(HIRE_DATE) 
 ); 
