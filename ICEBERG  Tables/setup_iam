@@ -1,0 +1,82 @@
+----------
+-- iam Policy arn:aws:iam::904233092605:role/iceberg_unmanaged_si
+----------
+Policy_Name: Modify permissions in iceberg_unmanaged_si_policy 
+Policy:
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "AllowListBucket",
+			"Effect": "Allow",
+			"Action": [
+				"s3:ListBucket"
+			],
+			"Resource": "arn:aws:s3:::vdw-dev-iceberg"
+		},
+		{
+			"Sid": "AllowReadObjects",
+			"Effect": "Allow",
+			"Action": [
+				"s3:GetObject"
+			],
+			"Resource": "arn:aws:s3:::vdw-dev-iceberg/employees/*"
+		}
+	]
+}
+CFT_JSON:
+{
+    "Type": "AWS::IAM::Policy",
+    "Properties": {
+        "PolicyName": "Policy 1",
+        "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "AllowListBucket",
+                    "Effect": "Allow",
+                    "Action": [
+                        "s3:ListBucket"
+                    ],
+                    "Resource": "arn:aws:s3:::vdw-dev-iceberg"
+                },
+                {
+                    "Sid": "AllowReadObjects",
+                    "Effect": "Allow",
+                    "Action": [
+                        "s3:GetObject"
+                    ],
+                    "Resource": "arn:aws:s3:::vdw-dev-iceberg/employees/*"
+                }
+            ]
+        }
+    }
+}
+
+-----------
+-- iam role
+-----------
+arn:aws:iam::904233092605:role/iceberg_unmanaged_si
+Trust Policy;
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::935542360084:user/6nrd1000-s"
+            },
+            "Action": "sts:AssumeRole",
+            "Condition": {
+                "StringEquals": {
+                    "sts:ExternalId": "EYB38761_SFCRole=3_Eorb/6bhHX6xhHAORaKJ95d6wXI="
+                }
+            }
+        }
+    ]
+}
+
+----------
+-- s3
+----------
+arn:aws:s3:::vdw-dev-iceberg
