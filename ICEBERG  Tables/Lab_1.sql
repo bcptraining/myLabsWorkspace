@@ -63,7 +63,7 @@ use role accountadmin;
 
 CREATE OR REPLACE CATALOG INTEGRATION CAT_INT_GLUE
 CATALOG_SOURCE = GLUE
-CATALOG_NAMESPACE ='hrms'
+CATALOG_NAMESPACE ='hrms' -- This refers to glue database name
 TABLE_FORMAT = ICEBERG
 -- GLUE_AWS_ROLE_ARN = 'arn:aws:iam::133202620729:role/s3_glue_Role' 
 GLUE_AWS_ROLE_ARN = 'arn:aws:iam::904233092605:role/iceberg_unmanaged_si'
@@ -71,9 +71,8 @@ GLUE_CATALOG_ID='904233092605'  -- USE THE 12 DIGIT AWS ACCOUNT NUMBER OF THE GL
 GLUE_REGION='us-west-2'
 ENABLED=TRUE;
 
-SHOW INTEGRATIONS;  -- Note: It seems this does not include the external volume even though it has its own external id and needs to be on the s3 trust policy
-
-DESCRIBE INTEGRATION CAT_INT_GLUE;
+SHOW CATALOG INTEGRATIONS;  -- Note: "SHOW CATALOG INTEGRATIONS" different than "SHOW INTEGRATIONS" 
+DESCRIBE INTEGRATION CAT_INT_GLUE; -- Note: And yet we can use "DESCRIBE INTEGRATION"
 -- GLUE_AWS_EXTERNAL_ID = EYB38761_SFCRole=3_hRhPLXzyO9eFQUk5tR5J6ozTvi4=
 
 -----------------------------
@@ -85,8 +84,16 @@ CREATE OR REPLACE CATALOG hrms_glue -- This fails. Do I not have this enabled in
 show catalogs;   -- SQL compilation error: Object type or Class 'CATALOGS' does not exist or not authorized.
 
 ------------------------------
--- Create an iceberg external table
+-- Create an iceberg external table instead
 ------------------------------
+
+CREATE OR REPLACE ICEBERG TABLE hr.aws_athena_employees_iceberg_ext
+  EXTERNAL_VOLUME = ICEBERG_VOLUME_UNMANAGED
+  -- CATALOG_INTEGRATION = CAT_INT_GLUE
+  BASE_LOCATION = 's3://vdw-dev-iceberg/employees_iceberg/';
+
+SHOW PARAMETERS LIKE 'ENABLE_EXTERNAL_ICEBERG_TABLES'; --Query produced no results
+SHOW PARAMETERS LIKE 'ENABLE_ICEBERG_TABLES';          --Query produced no results
 
 CREATE OR REPLACE ICEBERG TABLE hrms.aws_athena_employees_iceberg_ext
   CATALOG = GLUE
@@ -94,14 +101,19 @@ CREATE OR REPLACE ICEBERG TABLE hrms.aws_athena_employees_iceberg_ext
   EXTERNAL_VOLUME = your_external_volume_name
   BASE_LOCATION = 's3://vdw-dev-iceberg/employees_iceberg/';
 
+CREATE OR REPLACE ICEBERG TABLE hrms.aws_athena_employees_iceberg_ext
+  CATALOG = GLUE
+  CATALOG_INTEGRATION = CAT_INT_GLUE
+  EXTERNAL_VOLUME = ICEBERG_VOLUME_UNMANAGED
+  BASE_LOCATION = 's3://vdw-dev-iceberg/employees_iceberg/';
 
 
 ---------
 
 CREATE OR REPLACE ICEBERG TABLE ICEBERG.HR.IB_EMPLOYEES
-CATALOG_TABLE_NAME ='aws_iceberg_employees'
+CATALOG_TABLE_NAME ='hrms.aws_athena_employees_iceberg'
 CATALOG =' CAT_INT_GLUE'
-EXTERNAL_VOLUME = 'iceberg_volume';
+EXTERNAL_VOLUME = 'ICEBERG_VOLUME_UNMANAGED';
 --METADATA_FILE_PATH =
 
 
