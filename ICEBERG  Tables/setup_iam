@@ -69,7 +69,11 @@ Trust Policy;
             "Action": "sts:AssumeRole",
             "Condition": {
                 "StringEquals": {
-                    "sts:ExternalId": "EYB38761_SFCRole=3_Eorb/6bhHX6xhHAORaKJ95d6wXI="
+                    "sts:ExternalId": [
+--                         "EYB38761_SFCRole=3_Eorb/6bhHX6xhHAORaKJ95d6wXI=", <-- Storage Integration
+--                         "EYB38761_SFCRole=3_TLJAHOSUZvTEhPq1FAyz9lyk6D0=", <-- External Volume (ICEBERG_VOLUME_EMPLOYEES_2)
+--                         "EYB38761_SFCRole=3_hRhPLXzyO9eFQUk5tR5J6ozTvi4="  <-- CATALOG INTEGRATION (CAT_INT_GLUE)
+--                     ]
                 }
             }
         }
