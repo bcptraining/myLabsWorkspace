@@ -3,7 +3,7 @@
 -------------------------------
 use database VARIANT;
 create schema IF NOT EXISTS OBJECT_CONSTRUCT;
-USE SCHEMA  
+USE SCHEMA  OBJECT_CONSTRUCT;
 
 -------------------------------
 -- SETUP
