@@ -2,7 +2,8 @@
 -- HANDS‑ON LAB: Mastering OBJECT_CONSTRUCT
 -------------------------------
 use database VARIANT;
-create schema OBJECT_CONSTRUCT;
+create schema IF NOT EXISTS OBJECT_CONSTRUCT;
+USE SCHEMA  
 
 -------------------------------
 -- SETUP
@@ -132,3 +133,22 @@ SELECT
     ) AS merged_obj                                                     -- { "age": 30, "city": "Seattle",  "first": "Alice", "last": "Jones"}
 FROM people;
 
+------------------------------
+-- Exercise 7 — Pattern-based inclusion via ILIKE
+------------------------------
+
+SELECT OBJECT_CONSTRUCT(*) AS obj
+FROM (
+    SELECT * ILIKE '%_NAME', age
+    FROM people
+);
+
+------------------------------
+-- Exercise 8 — Exclusion‑based selection
+------------------------------
+-- { "AGE": 30, "CITY": "Seattle","FIRST_NAME": "Alice","ID": 1,"LAST_NAME": "Jones"}
+SELECT OBJECT_CONSTRUCT(*) AS obj
+FROM (
+    SELECT * EXCLUDE (profile_ssn, tag)
+    FROM people
+);
