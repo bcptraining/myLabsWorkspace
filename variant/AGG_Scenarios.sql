@@ -187,3 +187,13 @@ SELECT
     ) AS id_to_city
 FROM people
 GROUP BY tag;
+
+
+--------------------------------
+--  OBJECT_AGG Value Rules: How Snowflake Converts Different Types to VARIANT
+--------------------------------
+
+select OBJECT_AGG('x', 123); -- { "x": 123}  -- Note: Snowflake auto‑converts numeric literals to VARIANTt
+select OBJECT_AGG('y', TO_VARIANT('hello')) FROM (SELECT 1); -- { "y": "hello" } -- Note: String literals are NOT auto‑converted to VARIANT 
+select OBJECT_AGG('z', PARSE_XML('<a/>')); -- { "z": { "$": "", "@": "a"}}
+select OBJECT_AGG('w', ARRAY_CONSTRUCT(1,2,3)); -- { "w": [ 1, 2, 3 ]}
