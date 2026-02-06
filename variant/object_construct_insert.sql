@@ -1,7 +1,8 @@
 -------------------------------
 -- HANDS‑ON LAB: Mastering OBJECT_CONSTRUCT
 -------------------------------
-use database VARIANT;
+create database variant;
+-- use database VARIANT;
 create schema OBJECT_CONSTRUCT;
 
 -------------------------------

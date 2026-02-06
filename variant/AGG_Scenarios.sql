@@ -13,6 +13,25 @@ USE DATABASE VARIANT;
 CREATE SCHEMA IF NOT EXISTS OBJECT_CONSTRUCT;
 USE SCHEMA OBJECT_CONSTRUCT;
 
+
+-------------------------------
+-- SETUP
+-------------------------------
+CREATE OR REPLACE TABLE people (
+    id INTEGER,
+    first_name STRING,
+    last_name STRING,
+    age INTEGER,
+    city STRING,
+    profile_ssn STRING,
+    tag STRING
+);
+
+INSERT INTO people VALUES
+(1, 'Alice', 'Jones', 30, 'Seattle', '111-22-3333', 'premium'),
+(2, 'Bob',   'Smith', 45, 'Denver',  '222-33-4444', 'trial'),
+(3, 'Cara',  'Lee',   28, 'Austin',  NULL,          'premium');
+
 -------------------------------
 -- AGG limitations (important mental model)
 -------------------------------
@@ -197,3 +216,164 @@ select OBJECT_AGG('x', 123); -- { "x": 123}  -- Note: Snowflake auto‑converts 
 select OBJECT_AGG('y', TO_VARIANT('hello')) FROM (SELECT 1); -- { "y": "hello" } -- Note: String literals are NOT auto‑converted to VARIANT 
 select OBJECT_AGG('z', PARSE_XML('<a/>')); -- { "z": { "$": "", "@": "a"}}
 select OBJECT_AGG('w', ARRAY_CONSTRUCT(1,2,3)); -- { "w": [ 1, 2, 3 ]}
+
+--------------------------------
+-- 🚀 Exercise 8 — ARRAY_AGG as a Window Function (Running + Sliding Windows)
+--------------------------------
+-- Goal: Understand how ARRAY_AGG behaves when used as a window function instead of a GROUP BY aggregate.
+-- Why this matters:
+-- Windowed arrays are used for running history, sliding windows, ordered event sequences, and per‑row contextual arrays.
+-- Exam questions love this because the rules differ from GROUP BY aggregation.
+-- This is where PARTITION BY, ORDER BY, and window frames become essential.
+
+--------------------------------
+-- 8.1 — Basic Windowed ARRAY_AGG (Running Array): Each row gets an array of all values up to that row.
+--------------------------------
+-- Key concept:  
+-- OVER (ORDER BY id) produces a running array.
+-- Each row’s array grows as the window moves.
+-- Expected: ID=3, FIRST_NAME = Cara, RUNNING_NAMES = ["Alice", "Bob", "Cara"]
+
+SELECT
+    id,
+    first_name,
+    ARRAY_AGG(first_name) OVER (
+        ORDER BY id
+    ) AS running_names
+FROM people
+ORDER BY id;
+
+--------------------------------
+-- 8.2 — Windowed ARRAY_AGG With PARTITION BY (Per‑Group Running Arrays)
+--------------------------------
+-- Goal: Each group gets its own running array.  
+-- Expected (row: tag='premium', id=3, FIRST_NAME = Cara, RUNNING_NAMES_BY_TAG = ["Alice", "Cara"]
+-- Why this row? Because it shows the partition reset: Cara only sees Alice (same tag), not Bob.
+SELECT
+    tag,
+    id,
+    first_name,
+    ARRAY_AGG(first_name) OVER (
+        PARTITION BY tag
+        ORDER BY id
+    ) AS running_names_by_tag
+FROM people
+ORDER BY tag, id;
+
+--------------------------------
+-- 8.3 — Sliding Window (1 PRECEDING → CURRENT ROW)
+--------------------------------
+-- Expected (row: id=3, FIRST_NAME = Cara, SLIDING_TWO = ["Bob", "Cara"]
+-- This row shows the classic “previous + current” behavior.
+SELECT
+    id,
+    first_name,
+    ARRAY_AGG(first_name) OVER (
+        ORDER BY id
+        ROWS BETWEEN 1 PRECEDING AND CURRENT ROW
+    ) AS sliding_two
+FROM people
+ORDER BY id;
+--------------------------------
+-- 8.4 — RANGE Frame (UNBOUNDED PRECEDING → CURRENT ROW)
+--------------------------------
+-- Expected (row: age=30):
+-- RANGE_BY_AGE = ["Cara", "Alice"]
+-- (Because ages 28 and 30 fall within the range up to 30)
+-- This row is the most interesting because it shows how RANGE groups rows by value, not row position.
+SELECT
+    id,
+    age,
+    first_name,
+    ARRAY_AGG(first_name) OVER (
+        ORDER BY age
+        RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS range_by_age
+FROM people
+ORDER BY age;
+
+--------------------------------
+-- 8.5 — ORDER BY Inside ARRAY_AGG (Value Ordering)
+--------------------------------
+-- Snowflake rule:
+--   ❌ ORDER BY inside ARRAY_AGG is NOT allowed in window functions.
+--   ❌ WITHIN GROUP is NOT allowed when OVER contains ORDER BY.
+--   ✔ To demonstrate ordering, pre-sort the rows before the window.
+--
+-- Expected (row: id=3):
+-- ORDERED_INSIDE_ARRAY = ["Alice", "Bob", "Cara"]
+-- (Alphabetical because the input rows were pre-sorted)
+
+SELECT
+    id,
+    ARRAY_AGG(first_name) OVER (ORDER BY id) AS ordered_inside_array
+FROM (
+    SELECT id, first_name
+    FROM people
+    ORDER BY first_name
+)
+ORDER BY id;
+
+--------------------------------
+-- 8.6 — DISTINCT Not Allowed With ORDER BY (Error Demo)
+--------------------------------
+-- Expected: ERROR
+-- "DISTINCT is not supported with ORDER BY in windowed ARRAY_AGG"
+-- SQL compilation error: error line 324 at position 35 distinct cannot be used with a window frame or an order.
+SELECT
+    ARRAY_AGG(DISTINCT first_name) OVER (ORDER BY id)
+FROM people;
+
+--------------------------------
+-- 8.7 — NULL Exclusion (ARRAY_AGG Drops NULLs)
+--------------------------------
+-- Expected (row: id=3):
+-- SSN_HISTORY = ["111-22-3333", "222-33-4444"]
+-- (Cara's NULL SSN is excluded)
+-- This row clearly shows the NULL being skipped.
+SELECT
+    id,
+    profile_ssn,
+    ARRAY_AGG(profile_ssn) OVER (ORDER BY id) AS ssn_history
+FROM people
+ORDER BY id;
+
+--------------------------------
+-- 8.8 — Forward-Looking Window (CURRENT ROW → UNBOUNDED FOLLOWING)
+--------------------------------
+-- Expected (row: id=1):
+-- FUTURE_NAMES = ["Alice", "Bob", "Cara"]
+-- This row is the most illustrative because it shows the entire future window.
+SELECT
+    id,
+    first_name,
+    ARRAY_AGG(first_name) OVER (
+        ORDER BY id
+        ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
+    ) AS future_names
+FROM people
+ORDER BY id;
+
+--------------------------------
+-- 8.9 — Comparison Table (Running vs Sliding vs Future)
+--------------------------------
+-- Expected (row: id=2):
+-- RUNNING = ["Alice", "Bob"]
+-- SLIDING_TWO = ["Alice", "Bob"]
+-- FUTURE = ["Bob", "Cara"]
+
+SELECT
+    id,
+    first_name,
+    ARRAY_AGG(first_name) OVER (ORDER BY id) AS running,
+    ARRAY_AGG(first_name) OVER (
+        ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW
+    ) AS sliding_two,
+    ARRAY_AGG(first_name) OVER (
+        ORDER BY id ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
+    ) AS future
+FROM people
+ORDER BY id;
+
+
+
