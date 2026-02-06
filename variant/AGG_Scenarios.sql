@@ -375,5 +375,26 @@ SELECT
 FROM people
 ORDER BY id;
 
+--------------------------------
+-- Notes: Window is the combination of the following
+--------------------------------
+-- The simplest way to say it
+-- OVER = “Use window semantics instead of collapsing rows.”
+-- ORDER BY = “Move the window in this order.”
+-- ROWS BETWEEN = “Define the exact shape of the window.”
 
-
+--------------------------------
+-- Adhoc/practice
+--------------------------------
+SELECT
+    id,
+    first_name,
+    ARRAY_AGG(first_name) OVER (ORDER BY id) AS running,
+    ARRAY_AGG(first_name) OVER (
+        ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW
+    ) AS sliding_two,
+    ARRAY_AGG(first_name) OVER (
+        ORDER BY id ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
+    ) AS future
+FROM people
+ORDER BY id;
