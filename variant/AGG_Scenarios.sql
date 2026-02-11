@@ -52,6 +52,7 @@ INSERT INTO people VALUES
 -- Expected: {"1":"Alice","2":"Bob","3":"Cara"}
 SELECT OBJECT_AGG(TO_VARCHAR(id), TO_VARIANT(first_name)) AS obj
 FROM people;
+select * from people;
 
 -------------------------------
 -- Exercise 2 — OBJECT_AGG With GROUP BY (Group → Object)
@@ -109,6 +110,11 @@ FROM (
 --   • Teaches “row → object → array” nesting
 SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*)) AS arr
 FROM people;
+-- WRAP ARRAY AS OBJECT
+SELECT OBJECT_CONSTRUCT('PEOPLE', ARRAY_AGG(first_name)) AS people_obj -- { "PEOPLE": [ "Alice", "Bob", "Cara"]}
+FROM people;
+
+
 
 -- Challenge: Only include selected attributes
 SELECT ARRAY_AGG(

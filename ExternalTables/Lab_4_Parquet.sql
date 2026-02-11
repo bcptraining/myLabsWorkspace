@@ -1,5 +1,6 @@
 -- External Table LAB 4 
-
+create database hrms;
+create schema HR;
 -- Context
 USE DATABASE HRMS; 
 USE SCHEMA HR; 
@@ -20,7 +21,7 @@ STORAGE_ALLOWED_LOCATIONS = ('s3://vdw-dev-ingest/loadingdatalabs/',
   's3://vdw-dev-ingest/loadingdatalabs/snowpipe/json/',
   's3://vdw-dev-ingest/loadingdatalabs/labcsv/et_parquet/');
 
-  desc integration  udemy_mc_et_parquet_si;
+  desc integration  udemy_mc_et_parquet_si; -- arn:aws:iam::969799720206:user/erqg1000-s  ;  COB74867_SFCRole=4_1WE6w4I9rnqEsp8wmmUmpC247fY=
 -----------------
 -- File Format
 ----------------
@@ -104,7 +105,7 @@ COPY INTO @HRMS.HR.AWS_ET_PARQUET_STAGE
 FROM HRMS.HR.EMPLOYEES_PARQUET_SRC
 FILE_FORMAT = (TYPE = PARQUET COMPRESSION = SNAPPY)
 OVERWRITE = TRUE;
-
+show stages;
 
 
 

@@ -14,6 +14,18 @@
 -- This lab uses TWO tables:
 --   1) orders_raw              → direct paths work
 --   2) orders_raw_misaligned   → direct paths fail (exam scenario)
+
+-- Summary from the exam question explains it well
+-- VARIANT path traversal: 
+--    colon notation for fields (data:field), 
+--    bracket notation for arrays (data:array[0]), 
+--    type casting for nested access (data:array[0]::VARIANT:nested). 
+--       Without type casting after array access, nested field access returns NULL. 
+--       FLATTEN alternative for complex nested structures. Use GET_PATH for dynamic paths. Type cast at each nesting level when using bracket notation with additional traversal.
+
+-- Mental Note: FLATTEN does two things:
+--   Splits arrays into rows
+--   Exposes each element as a clean VARIANT, making path traversal easy
 -----------------------------------------------
 
 USE DATABASE VARIANT;
@@ -61,9 +73,9 @@ FROM orders_raw;
 -- 1.2 — Optional: Inspect Types
 -----------------------------------------------
 SELECT
-    TYPEOF(data:orders)        AS orders_type,
-    TYPEOF(data:orders[0])     AS element_type,
-    TYPEOF(data:orders[0]:items) AS items_type
+    TYPEOF(data:orders)        AS orders_type,  -- Array
+    TYPEOF(data:orders[0])     AS element_type, -- Object
+    TYPEOF(data:orders[0]:items) AS items_type  -- Array
 FROM orders_raw;
 
 -- Compare this to Section 2 later.
@@ -144,10 +156,10 @@ LATERAL FLATTEN(input => data:orders) f;
 -----------------------------------------------
 -- This reveals WHY direct access fails.
 SELECT
-    TYPEOF(data:orders)                 AS orders_type,
-    TYPEOF(data:orders[0])              AS element_type,
-    TYPEOF(data:orders[0]:value)        AS wrapped_value_type,
-    TYPEOF(data:orders[0]:value:items)  AS items_type
+    TYPEOF(data:orders)                 AS orders_type,         -- Array
+    TYPEOF(data:orders[0])              AS element_type,        -- Object   
+    TYPEOF(data:orders[0]:value)        AS wrapped_value_type,  -- Object 
+    TYPEOF(data:orders[0]:value:items)  AS items_type           -- Array
 FROM orders_raw_misaligned;
 
 -----------------------------------------------
@@ -185,3 +197,65 @@ FROM orders_raw_misaligned;
 -- Challenge 3:
 -- Write a generic reminder pattern for nested arrays + objects:
 --   root:array_field[index]::VARIANT:nested_field[more_index]:deeper_field
+
+-----------------------------------------------
+-- 4 — GET_PATH: Dynamic and Safe JSON Navigation
+--
+-- Why GET_PATH matters:
+--   • Works even when colon notation fails
+--   • Accepts dynamic paths (variables, columns)
+--   • Returns NULL safely without breaking traversal
+--   • Essential for programmatic JSON exploration
+-----------------------------------------------
+
+-----------------------------------------------
+-- 4.1 — GET_PATH Works on Normal Structure
+-----------------------------------------------
+SELECT
+    data,
+    TYPEOF(data:orders[0]:items) as items_typeof,                       -- Array
+    GET_PATH(data, 'orders[0].items') AS items_via_get_path,            -- Array
+    TYPEOF(data:orders[0]:items[0]) as item_typeof,                     -- Object
+    GET_PATH(data, 'orders[0].items[0].sku') AS first_sku_via_get_path
+FROM orders_raw;
+
+-----------------------------------------------
+-- 4.2 — GET_PATH Works on Misaligned Structure
+-----------------------------------------------
+SELECT
+    TYPEOF(data:orders) as orders_typeof,
+    TYPEOF(data:orders[0].value) as orders_value_typeof,
+    TYPEOF(data:orders[0]:value.items) as items_typeof,                  -- ARRAY of value objects
+    GET_PATH(data, 'orders[0].value.items') AS items_via_get_path,
+    GET_PATH(data, 'orders[0].value.items[0].sku') AS first_sku_via_get_path
+FROM orders_raw_misaligned;
+
+-----------------------------------------------
+-- 4.3 — Compare GET_PATH vs Colon Notation
+-----------------------------------------------
+SELECT
+    data:orders[0]:items                         AS colon_direct,
+    GET_PATH(data, 'orders[0].items')            AS get_path_direct,
+
+    data:orders[0]:value:items                   AS colon_wrapped,
+    GET_PATH(data, 'orders[0].value.items')      AS get_path_wrapped
+FROM orders_raw_misaligned;
+
+-----------------------------------------------
+-- 4.4 — Dynamic Path Example (Colon Notation Cannot Do This)
+-----------------------------------------------
+WITH params AS (
+    SELECT 'orders[1].value.items[0].qty' AS dynamic_path
+)
+SELECT
+    GET_PATH(data, dynamic_path) AS dynamic_lookup
+FROM orders_raw_misaligned, params;
+
+-----------------------------------------------
+-- 4.5 — GET_PATH Is Safer for Missing Fields
+-----------------------------------------------
+SELECT
+    GET_PATH(data, 'orders[0].items')            AS safe_path,
+    GET_PATH(data, 'orders[0].does_not_exist')   AS safe_missing,
+    data:orders[0]:does_not_exist                AS colon_missing
+FROM orders_raw;

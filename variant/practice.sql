@@ -13,3 +13,8 @@ SELECT
     )
     )AS full_obj
  from people;   
+
+show tables  like 'people';
+
+select * from people;
+
