@@ -1,48 +1,19 @@
--- Prerequisite create HRMS.HR and complete external_tables/lab4_parquet.sql so we have some parquet data 
-
-
-
-
-
--------------------------
--- Create external table
--------------------------
-CREATE OR REPLACE EXTERNAL TABLE EXT_EMPLOYEES_REFRESH 
-( 
-EMPLOYEE_ID    VARCHAR   AS (VALUE:c1::VARCHAR), 
-FIRST_NAME     VARCHAR   AS (VALUE:c2::VARCHAR), 
-LAST_NAME      VARCHAR   AS (VALUE:c3::VARCHAR), 
-EMAIL          
-VARCHAR   AS (VALUE:c4::VARCHAR), 
-PHONE_NUMBER   VARCHAR   AS (VALUE:c5::VARCHAR), 
-HIRE_DATE VARCHAR   AS (VALUE:c6::VARCHAR), 
-JOB_ID    VARCHAR   AS (VALUE:c7::VARCHAR), 
-SALARY    VARCHAR   AS (VALUE:c8::VARCHAR), 
-COMMISSION_PCT VARCHAR   AS (VALUE:c9::VARCHAR), 
-MANAGER_ID     VARCHAR   AS (VALUE:c10::VARCHAR), 
-DEPARTMENT_ID  VARCHAR   AS (VALUE:c11::VARCHAR) 
-) 
-LOCATION=HRMS.HR.@AWS_ET_CSV_STAGE 
-AUTO_REFRESH= TRUE 
-PATTERN='.*employees.*[.]csv' 
-FILE_FORMAT = CSV_ET_FILEFORMAT; 
-desc  table  EXT_EMPLOYEES_REFRESH;
 ---------------------------------
--- Hands‑On Lab: JSON vs Parquet (Using Your Real Parquet Dataset)
+-- Hands‑On Lab: JSON vs Parquet in Snowflake
+-- Using Real LOCATIONS Parquet Data
 ---------------------------------
 
 -- Lab Overview
 -- You will:
--- 1. Load Parquet data from your S3 stage
--- 2. Store it as VARIANT in a Parquet-backed table
--- 3. Convert that same data into JSON text
--- 4. Load the JSON into a JSON-backed table
--- 5. Compare storage size
--- 6. Compare query performance
--- 7. Explore schema evolution & missing fields
+-- 1. Materialize your Parquet external table into a typed table
+-- 2. Expand the dataset (so Parquet advantages become visible)
+-- 3. Create a JSON VARIANT table with identical logical data
+-- 4. Compare storage size
+-- 5. Compare query performance
+-- 6. Explore schema evolution & missing fields
 
 ---------------------------------
--- 1. Context Setup
+-- Context Setup
 ---------------------------------
 
 CREATE DATABASE IF NOT EXISTS variant_formats;
@@ -50,145 +21,160 @@ CREATE SCHEMA IF NOT EXISTS json_vs_parquet_lab;
 USE DATABASE variant_formats;
 USE SCHEMA json_vs_parquet_lab;
 
----------------------------------
--- 2. Create Tables
----------------------------------
-
--- Parquet-backed table (raw VARIANT)
-CREATE OR REPLACE TABLE parquet_employees (raw VARIANT);
-
--- JSON-backed table (raw VARIANT)
-CREATE OR REPLACE TABLE json_employees (raw VARIANT);
+----------------------------------
+-- Explore the parquet data that we aree starting with
+----------------------------------
+select * 
+FROM EXTERNALDB.ET.EXT_LOCATIONS_PARTITIONED_PARQUET;
 
 ---------------------------------
--- 3. Load Parquet From Your S3 Stage
+-- 2. Materialize Parquet External Table Into a Typed Table
 ---------------------------------
 
--- Your stage:
--- HRMS.HR.AWS_ET_PARQUET_STAGE
--- URL = 's3://vdw-dev-ingest/loadingdatalabs/labcsv/parquet/'
-
-LIST @HRMS.HR.AWS_ET_PARQUET_STAGE;
-
-COPY INTO parquet_employees
-FROM @HRMS.HR.AWS_ET_PARQUET_STAGE
-FILE_FORMAT = (TYPE = PARQUET);
-
-SELECT * FROM parquet_employees LIMIT 20;
-
----------------------------------
--- 4. Convert Parquet VARIANT Rows Into JSON
----------------------------------
-
--- Explanation:
---   TO_JSON() converts VARIANT → JSON text
---   PARSE_JSON() converts JSON text → VARIANT
---   This ensures the JSON table contains the *exact same logical data*
-
-INSERT INTO json_employees
-SELECT PARSE_JSON(TO_JSON(raw))
-FROM parquet_employees;
-
-SELECT * FROM json_employees LIMIT 20;
-
----------------------------------
--- 5. Validate That Both Tables Contain Identical Logical Data
----------------------------------
-
--- Compare row counts
+CREATE OR REPLACE TABLE locations_parquet_src AS
 SELECT
-    (SELECT COUNT(*) FROM parquet_employees) AS parquet_rows,
-    (SELECT COUNT(*) FROM json_employees) AS json_rows;
+    LOCATION_ID::NUMBER LOCATION_ID,
+    STREET_ADDRESS::STRING   AS STREET_ADDRESS,
+    POSTAL_CODE::STRING      AS POSTAL_CODE,
+    CITY::STRING             AS CITY,
+    COUNTRY_ID::STRING       AS COUNTRY_ID
+FROM EXTERNALDB.ET.EXT_LOCATIONS_PARTITIONED_PARQUET;
+-- cREATED THE TABLE THIS WAY INSTEAD SO LOCATION_ID COULD BE TYPES AS A NUMBER
 
--- Spot-check equality
+DESCRIBE TABLE locations_parquet_src;
+CREATE OR REPLACE TABLE locations_parquet_src AS
 SELECT
-    COUNT(*) AS matching_rows
-FROM parquet_employees p
-JOIN json_employees j
-    ON TO_JSON(p.raw) = TO_JSON(j.raw);
+    /* LOCATION_ID should be numeric */
+    CASE 
+        WHEN TRY_TO_NUMBER(LOCATION_ID) IS NULL 
+            THEN  2300   -- the correct LOCATION_ID for the Mexico row
+        ELSE LOCATION_ID::NUMBER(38,0)
+    END AS LOCATION_ID,
+
+    /* STREET_ADDRESS should be the real street */
+    CASE 
+        WHEN TRY_TO_NUMBER(LOCATION_ID) IS NULL 
+            THEN 'MARIANO ESCOBEDO 9991'
+        ELSE STREET_ADDRESS
+    END AS STREET_ADDRESS,
+
+    /* POSTAL_CODE should be numeric or string postal code */
+    CASE 
+        WHEN TRY_TO_NUMBER(LOCATION_ID) IS NULL 
+            THEN '11932'
+        ELSE POSTAL_CODE
+    END AS POSTAL_CODE,
+
+    /* CITY should be the real city */
+    CASE 
+        WHEN TRY_TO_NUMBER(LOCATION_ID) IS NULL 
+            THEN 'MEXICO CITY'
+        ELSE RTRIM(CITY, '\\')   -- also removes the trailing slash
+    END AS CITY,
+
+    COUNTRY_ID::STRING AS COUNTRY_ID
+FROM EXTERNALDB.ET.EXT_LOCATIONS_PARTITIONED_PARQUET;
+
+
+SELECT * FROM locations_parquet_src LIMIT 20;
 
 ---------------------------------
--- 6. Inspect JSON vs Parquet Internals
+-- 3. Expand Dataset (So JSON vs Parquet Differences Are Visible)
 ---------------------------------
 
--- JSON
+-- Expand to ~600k rows (12 rows × 50,000)
+-- Adjust ROWCOUNT lower if you want to minimize cost.
+
+CREATE OR REPLACE TABLE locations_parquet_big AS
+SELECT *
+FROM locations_parquet_src
+CROSS JOIN TABLE(GENERATOR(ROWCOUNT => 50000));
+
+SELECT COUNT(*) FROM locations_parquet_big; -- 1M rows
+DESC TABLE locations_parquet_big;;
+-- SELECT * FROM locations_parquet_big LIMIT 10;
+---------------------------------
+-- 4. Create JSON Table With Identical Logical Data
+---------------------------------
+
+CREATE OR REPLACE TABLE locations_json_src (raw VARIANT);
+
+SELECT * FROM locations_parquet_big limit 10;
+
+INSERT INTO locations_json_src
+SELECT OBJECT_CONSTRUCT(
+    'LOCATION_ID', LOCATION_ID,
+    'STREET_ADDRESS', STREET_ADDRESS,
+    'POSTAL_CODE', POSTAL_CODE,
+    'CITY', CITY,
+    'COUNTRY_ID', COUNTRY_ID
+)
+FROM locations_parquet_big;
+-- DESC TABLE locations_json_src;
+SELECT COUNT(*) FROM locations_json_src; -- 1M ROWS
+SELECT COUNT(*) FROM locations_parquet_big; -- 1M ROWS
+
+---------------------------------
+-- 5. Validate Row Counts Match
+---------------------------------
+
 SELECT
-    typeof(raw) AS type,
-    raw
-FROM json_employees
-LIMIT 5;
-
--- Parquet
-SELECT
-    typeof(raw) AS type,
-    raw
-FROM parquet_employees
-LIMIT 5;
-
--- Both show OBJECT because Snowflake normalizes both into VARIANT.
+    (SELECT COUNT(*) FROM locations_parquet_big) AS parquet_rows, -- 1M rows; 4120576 BYTES
+    (SELECT COUNT(*) FROM locations_json_src) AS json_rows;       -- 1M rows; 3793408 BYTES
 
 ---------------------------------
--- 7. Compare Storage Size
+-- 6. Compare Storage Size
 ---------------------------------
-
+-- While this step is valid, the results were invalid due the way I synthetically generated the data
 SELECT table_name, bytes
 FROM information_schema.tables
-WHERE table_name IN ('JSON_EMPLOYEES', 'PARQUET_EMPLOYEES');
+WHERE table_name ILIKE '%LOCATIONS%';
 
 -- Expected:
---   Parquet uses fewer bytes due to:
---     • Columnar encoding
---     • Compression (Snappy/GZIP)
---     • Typed binary representation
+--   locations_parquet_big → smaller (columnar, compressed)
+--   locations_json_src    → larger (text-based JSON in VARIANT)
 
 ---------------------------------
--- 8. Compare Query Performance
+-- 7. Compare Query Performance
 ---------------------------------
 
--- Example: filter on a nested field (adjust path to match your data)
--- Replace raw:employee:id with whatever fields exist in your Parquet
-
+-- Parquet (typed, columnar, pruning)
 EXPLAIN
-SELECT raw
-FROM json_employees
-WHERE raw:employee:id::NUMBER > 1000;
+SELECT *
+FROM locations_parquet_big
+WHERE COUNTRY_ID = 'US';
 
+-- JSON (semi-structured, no pruning)
 EXPLAIN
-SELECT raw
-FROM parquet_employees
-WHERE raw:employee:id::NUMBER > 1000;
-
--- Expected:
---   Parquet shows:
---     • Fewer CPU operations
---     • Better pruning
---     • Faster execution
+SELECT *
+FROM locations_json_src
+WHERE raw:COUNTRY_ID::STRING = 'US';
 
 ---------------------------------
--- 9. Schema Evolution Differences
+-- 8. Schema Evolution Differences
 ---------------------------------
 
--- JSON evolves naturally (schema-less)
-INSERT INTO json_employees
+-- JSON evolves naturally
+INSERT INTO locations_json_src
 SELECT PARSE_JSON('{
-  "employee": { "id": 9999, "name": "New Hire", "title": "VP" },
-  "compensation": { "salary": 200000 }
+  "LOCATION_ID": 9999,
+  "CITY": "New City",
+  "COUNTRY_ID": "US",
+  "NEW_FIELD": "extra metadata"
 }');
 
--- Parquet requires producer schema updates:
---   The Parquet file must include the new column.
---   Snowflake loads it fine, but the file must be valid.
+-- Parquet requires producer schema updates.
 
 ---------------------------------
--- 10. Query Behavior With Missing Fields
+-- 9. Query Behavior With Missing Fields
 ---------------------------------
 
-SELECT raw:employee:title::STRING
-FROM json_employees
+SELECT raw:NEW_FIELD::STRING
+FROM locations_json_src
 LIMIT 10;
 
-SELECT raw:employee:title::STRING
-FROM parquet_employees
+SELECT raw:NEW_FIELD::STRING
+FROM locations_parquet_big
 LIMIT 10;
 
 -- JSON: missing fields → NULL
