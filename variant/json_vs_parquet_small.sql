@@ -297,6 +297,3 @@ LIMIT 10;
 -- JSON: missing fields → NULL
 -- Parquet: depends on file schema evolution rules
 
----------------------------------
--- END OF LAB
----------------------------------

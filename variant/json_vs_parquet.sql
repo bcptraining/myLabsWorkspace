@@ -1,5 +1,5 @@
 ---------------------------------
--- Hands‑On Lab: JSON vs Parquet in Snowflake
+-- Hands‑On Lab 1: JSON vs Parquet in Snowflake
 -- Using Real LOCATIONS Parquet Data
 ---------------------------------
 
@@ -181,5 +181,147 @@ LIMIT 10;
 -- Parquet: depends on file schema evolution rules
 
 ---------------------------------
--- END OF LAB
+-- END OF LAB 1
 ---------------------------------
+
+
+/*-------------------------------
+-- 🧪 Lab 2: Detecting New Files in S3 (Directory Table vs External Table vs Streams)
+-- This section teaches learners:
+-- how Snowflake becomes aware of new files in S3
+-- how directory tables work
+-- how external tables refresh
+-- how streams on external tables detect new data
+-- This is a perfect complement to your JSON vs Parquet comparison.
+---------------------------------*/
+
+
+/*-----------------------------------------
+1. View the Directory Table (metadata only)
+Directory tables show file‑level metadata, not row‑level data.
+------------------------------------------*/
+
+SELECT *
+FROM DIRECTORY(@EXTERNALDB.ET.AWS_PARQUET_SAMPLE_STAGE); -- DIRECTORY not enabled for the stage EXTERNALDB.ET.AWS_PARQUET_SAMPLE_STAGE
+list @EXTERNALDB.ET.AWS_PARQUET_SAMPLE_STAGE;            -- Shows several files i nthe stage 
+
+-- This was how the stage was created in parquet_sample_location_data.sql
+-- CREATE OR REPLACE STAGE EXTERNALDB.ET.AWS_PARQUET_SAMPLE_STAGE 
+--   STORAGE_INTEGRATION = UDEMY_MC_ET_PARQUET_SI  -- arn:aws:iam::969799720206:user/erqg1000-s    COB74867_SFCRole=4_1WE6w4I9rnqEsp8wmmUmpC247fY=     
+--   URL = 's3://vdw-dev-ingest/external_table_lab/parquet/'
+--   FILE_FORMAT = (TYPE = PARQUET);
+
+  -- Need to alter it to enable the directory table
+ALTER STAGE EXTERNALDB.ET.AWS_PARQUET_SAMPLE_STAGE
+SET DIRECTORY = (ENABLE = TRUE);
+DESC STAGE EXTERNALDB.ET.AWS_PARQUET_SAMPLE_STAGE;  -- You now see DIRECTORY is enabled and that it has never been refreshed.
+--Refresh the directory table:
+ALTER STAGE EXTERNALDB.ET.AWS_PARQUET_SAMPLE_STAGE REFRESH;
+-- Now see the good metadata in the directory table: 
+SELECT *
+FROM DIRECTORY(@EXTERNALDB.ET.AWS_PARQUET_SAMPLE_STAGE);
+
+/*-----------------------------------------
+-- 2. Compare Directory Table vs External Table (file metadata vs actual data)
+------------------------------------------*/
+
+-- Directory table: file-level metadata only
+SELECT *,
+    -- RELATIVE_PATH,
+    -- SIZE,
+    -- LAST_MODIFIED,
+    -- FILE_URL,
+    REPLACE(SPLIT_PART(FILE_URL, '/', -1), '%2e', '.') AS FILE_NAME
+FROM DIRECTORY(@EXTERNALDB.ET.AWS_PARQUET_SAMPLE_STAGE)
+ORDER BY LAST_MODIFIED DESC;
+
+-- External table: row-level data (requires REFRESH)
+SELECT *
+FROM externaldb.ET.EXT_LOCATIONS_PARTITIONED_PARQUET
+LIMIT 20;
+
+/*-----------------------------------------
+-- 3. External Table Refresh
+-- External table refresh = “Scan S3 for new files and update Snowflake’s metadata
+-- so those files (and their partitions) become queryable.”
+------------------------------------------*/
+
+
+-- Force Snowflake to detect new files
+ALTER EXTERNAL TABLE externaldb.ET.EXT_LOCATIONS_PARTITIONED_PARQUET
+REFRESH;
+
+-- Now query again
+SELECT *
+FROM externaldb.ET.EXT_LOCATIONS_PARTITIONED_PARQUET
+ORDER BY COUNTRY_ID, LOCATION_ID;
+
+/*-----------------------------------------
+-- 4. Create a Stream on the External Table
+------------------------------------------*/
+
+-- This fails for reason stated in error msg: -- Streams on External Tables or Iceberg tables with an external catalog must have INSERT_ONLY set to true.
+CREATE OR REPLACE STREAM ext_locations_stream
+ON EXTERNAL TABLE externaldb.ET.EXT_LOCATIONS_PARTITIONED_PARQUET; 
+-- This succeeds (streams on external tavbles must be INSERT_ONLY=TRUR)
+CREATE OR REPLACE STREAM ext_locations_stream
+ON EXTERNAL TABLE externaldb.ET.EXT_LOCATIONS_PARTITIONED_PARQUET
+INSERT_ONLY = TRUE;
+
+
+-- Check the stream (should be empty initially)
+SELECT *
+FROM ext_locations_stream;
+
+
+/*-----------------------------------------
+-- 5. Detect New Files Using Stream
+------------------------------------------*/
+-- Prerequisite: Load a new parquet file into the s3 location
+
+-- Step 1: Refresh the stage directory table
+ALTER STAGE EXTERNALDB.ET.AWS_PARQUET_SAMPLE_STAGE REFRESH;
+
+-- Step 2: Refresh the external table to load new rows
+ALTER EXTERNAL TABLE externaldb.ET.EXT_LOCATIONS_PARTITIONED_PARQUET
+REFRESH;
+
+-- Step 3: Query the stream to see new rows
+SELECT *
+FROM ext_locations_stream;  -- Shows new data rows from the parquet file loaded into s3
+
+/*-----------------------------------------
+-- 6. Consume the Stream (Incremental Ingestion)
+-- Streams represent NEW rows since the last consumption.
+-- Once consumed, the stream becomes empty.
+------------------------------------------*/
+
+-- Create a curated table if not already created
+CREATE OR REPLACE TABLE curated_locations_incremental AS
+SELECT *
+FROM externaldb.ET.EXT_LOCATIONS_PARTITIONED_PARQUET
+WHERE 1 = 0;  -- empty table with same structure
+
+-- Consume the stream
+INSERT INTO curated_locations_incremental (
+    LOCATION_ID,
+    STREET_ADDRESS,
+    POSTAL_CODE,
+    CITY,
+    COUNTRY_ID
+)
+SELECT
+    LOCATION_ID,
+    STREET_ADDRESS,
+    POSTAL_CODE,
+    CITY,
+    COUNTRY_ID
+FROM ext_locations_stream;
+
+-- Stream should now be empty
+select * FROM ext_locations_stream; -- stream is empty now that it has been consumed
+
+-- Curated table now contains the new rows
+SELECT *
+FROM curated_locations_incremental
+ORDER BY COUNTRY_ID, LOCATION_ID;

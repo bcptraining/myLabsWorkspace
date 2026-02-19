@@ -222,10 +222,23 @@ FROM orders_raw;
 -----------------------------------------------
 -- 4.2 — GET_PATH Works on Misaligned Structure
 -----------------------------------------------
+-- Note: It is okay (bad practice tho) to mix colon and dot notation between segments. 
+-- However, a segment ends at a dot so you can see one invalid example below
 SELECT
     TYPEOF(data:orders) as orders_typeof,
     TYPEOF(data:orders[0].value) as orders_value_typeof,
     TYPEOF(data:orders[0]:value.items) as items_typeof,                  -- ARRAY of value objects
+    data:orders[0]:value:items as items_colon,  
+    data:orders[0]:value.items[0]:qty as items_colon_0_qty,
+    data:orders[0]:value:items[0].qty as items_colon_0_dot_qty,
+    data:orders[0].value:items[0]:qty as items_qty_mixed_notation,
+    data:orders[0].value:items[0]:qty as items_qty_mixed_doesitwork,
+    data:orders[0].value.items[0]:qty as items_qty_invalid1,
+    data:orders[0]:value.items[0]:qty as items_qty_invalid2,
+    -- data.orders[0]:value.items[0]:qty as items_qty_invalid3, -- SQL compilation error: error line 236 at position 4 invalid identifier 'DATA.ORDERS'
+    --  The above error is because a segment ends at a dot and cannot mix notation within same segment   
+    data:orders[0].value.items as items_dot,
+    data:orders[0].value.items[0].qty as items_dot_0_qty,
     GET_PATH(data, 'orders[0].value.items') AS items_via_get_path,
     GET_PATH(data, 'orders[0].value.items[0].sku') AS first_sku_via_get_path
 FROM orders_raw_misaligned;
