@@ -272,3 +272,90 @@ SELECT
     GET_PATH(data, 'orders[0].does_not_exist')   AS safe_missing,
     data:orders[0]:does_not_exist                AS colon_missing
 FROM orders_raw;
+
+-----------------------------------------------
+-- 5 — JSON_EXTRACT_PATH_TEXT: Legacy but Useful
+--
+-- Purpose:
+--   Provide a TEXT-returning alternative to colon notation.
+--   Works even when nested structures are misaligned.
+--
+-- Key Traits:
+--   • Accepts exactly TWO arguments (variant, string path)
+--   • Path must be a single dot-notation string
+--   • Returns TEXT (not VARIANT)
+--   • Safe traversal similar to GET_PATH
+--   • Supports arrays using bracket notation inside the string
+-----------------------------------------------
+
+
+-----------------------------------------------
+-- 5.1 — Basic Usage on Normal Structure
+-----------------------------------------------
+-- Equivalent to: data:orders[0]:items[0]:sku
+-- But returns TEXT instead of VARIANT.
+SELECT
+    JSON_EXTRACT_PATH_TEXT(
+        data,
+        'orders[0].items[0].sku'
+    ) AS first_sku_text
+FROM orders_raw;
+
+
+-----------------------------------------------
+-- 5.2 — Works on Misaligned Structure
+-----------------------------------------------
+-- Equivalent to:
+--   data:orders[0]::VARIANT:value:items[0]:qty
+SELECT
+    JSON_EXTRACT_PATH_TEXT(
+        data,
+        'orders[0].value.items[0].qty'
+    ) AS qty_text
+FROM orders_raw_misaligned;
+
+
+-----------------------------------------------
+-- 5.3 — Why It Works When Colon Notation Fails
+-----------------------------------------------
+-- Colon notation fails because:
+--   orders[0] = { "value": { ... } }
+-- There is no :items at this level.
+--
+-- JSON_EXTRACT_PATH_TEXT walks the full path safely.
+SELECT
+    data:orders[0]:items AS colon_fails,
+    JSON_EXTRACT_PATH_TEXT(
+        data,
+        'orders[0].value.items'
+    ) AS json_extract_succeeds
+FROM orders_raw_misaligned;
+
+
+-----------------------------------------------
+-- 5.4 — Compare All Four Approaches Side-by-Side
+-----------------------------------------------
+SELECT
+    data:orders[0]:value:items[0]:sku                     AS colon_sku,
+    data:orders[0]::VARIANT:value:items[0]:sku            AS cast_sku,
+    GET_PATH(data, 'orders[0].value.items[0].sku')        AS get_path_sku,
+    JSON_EXTRACT_PATH_TEXT(
+        data,
+        'orders[0].value.items[0].sku'
+    ) AS json_extract_sku
+FROM orders_raw_misaligned;
+
+
+-----------------------------------------------
+-- 5.5 — When to Use JSON_EXTRACT_PATH_TEXT
+-----------------------------------------------
+-- Use when:
+--   • You want TEXT output directly
+--   • You need safe traversal without casting
+--   • JSON structure is unpredictable or misaligned
+--   • Reading or migrating legacy code
+--
+-- Avoid when:
+--   • You need arrays or objects (returns TEXT only)
+--   • You want clean VARIANT traversal (colon or GET_PATH is better)
+-----------------------------------------------
