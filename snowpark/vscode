@@ -1,0 +1,28 @@
+copilot says udf and sp unable to olpen files in internal stage. Alternative is python script.
+
+
+
+from snowflake.snowpark import Session
+from snowflake.snowpark.files import SnowflakeFile
+import pypdf
+
+# Create a Snowpark session
+connection_parameters = {
+    "account": "<your_account>",
+    "user": "<your_user>",
+    "password": "<your_password>",
+    "role": "ACCOUNTADMIN",
+    "warehouse": "COMPUTE_WH",
+    "database": "UNSTRUCTURED_DATA",
+    "schema": "PDF"
+}
+
+session = Session.builder.configs(connection_parameters).create()
+
+pdf_path = "@UNSTRUCTURED_DATA.PDF.PDF_STAGE/pdf.stage/CollabriaSeptember2025.pdf"
+
+with SnowflakeFile.open(pdf_path, 'rb') as f:
+    reader = pypdf.PdfReader(f)
+    text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+print(text)

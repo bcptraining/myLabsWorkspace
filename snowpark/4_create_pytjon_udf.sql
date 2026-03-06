@@ -47,6 +47,55 @@ SHOW PARAMETERS LIKE 'enable_anaconda_packages';
 SHOW PARAMETERS LIKE '%python%';
 ALTER ACCOUNT SET ENABLE_ANACONDA_PACKAGES = TRUE;
 ALTER ACCOUNT SET PYTHON_IMPORTS_ENABLED = TRUE;
+LIST @UNSTRUCTURED_DATA.PDF.PDF_STAGE;
+
+-- The udf is getting created but erroring out when called -- copilot says udfs cannot interact with files and to try a stored procedure instead
+CREATE OR REPLACE FUNCTION extract_pdf(file_path STRING)
+RETURNS STRING
+LANGUAGE PYTHON
+RUNTIME_VERSION = '3.10'
+ARTIFACT_REPOSITORY = snowflake.snowpark.pypi_shared_repository
+PACKAGES = ('pypdf', 'snowflake-snowpark-python')
+HANDLER = 'handler'
+AS
+$$
+import pypdf
+from snowflake.snowpark.files import SnowflakeFile
+from snowflake.snowpark import build_scoped_file_url
+
+def handler(file_path):
+    scoped = build_scoped_file_url(file_path)
+    with SnowflakeFile.open(scoped, 'rb') as f:
+        reader = pypdf.PdfReader(f)
+        return "\n".join(page.extract_text() or "" for page in reader.pages)
+$$;
+
+
+
+SELECT extract_pdf('@UNSTRUCTURED_DATA.PDF.PDF_STAGE/pdf.stage/CollabriaSeptember2025.pdf');
+
+-- Here is the stored procedure version
+CREATE OR REPLACE PROCEDURE extract_pdf_sp(file_path STRING)
+RETURNS STRING
+LANGUAGE PYTHON
+RUNTIME_VERSION = '3.10'
+PACKAGES = ('pypdf', 'snowflake-snowpark-python')
+HANDLER = 'handler'
+AS
+$$
+import pypdf
+from snowflake.snowpark.files import SnowflakeFile
+
+def handler(session, file_path):
+    with SnowflakeFile.open(file_path, 'rb') as f:
+        reader = pypdf.PdfReader(f)
+        return "\n".join(page.extract_text() or "" for page in reader.pages)
+$$;
+
+
+CALL extract_pdf_sp('@UNSTRUCTURED_DATA.PDF.PDF_STAGE/pdf.stage/CollabriaSeptember2025.pdf');
+
+
 
 
 CREATE OR REPLACE FUNCTION extract_pdf(file_path STRING)
