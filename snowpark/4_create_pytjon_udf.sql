@@ -34,30 +34,42 @@ CREATE OR REPLACE STAGE pdf_s3_stage
 SHOW STAGES LIKE 'PDF_S3_STAGE';
 
 list @pdf_s3_stage;
+list @pdf_stage;
 
 /*--------------------------
 Step 1. Create python udf: Function EXTRACT_PDF_TEXT successfully created.
+'@"UNSTRUCTURED_DATA"."PDF"."PYTHON_LIBRARIES_STAGE"/pypdf2-3.0.1-py3-none-any.whl'
 --------------------------*/
-CREATE OR REPLACE FUNCTION extract_pdf_text(file FILE) -- Function EXTRACT_PDF_TEXT successfully created.
+LIST @"UNSTRUCTURED_DATA"."PDF"."PYTHON_LIBRARIES_STAGE";
+
+SHOW PARAMETERS LIKE 'python_imports_enabled';
+SHOW PARAMETERS LIKE 'enable_anaconda_packages';
+SHOW PARAMETERS LIKE '%python%';
+ALTER ACCOUNT SET ENABLE_ANACONDA_PACKAGES = TRUE;
+ALTER ACCOUNT SET PYTHON_IMPORTS_ENABLED = TRUE;
+
+
+CREATE OR REPLACE FUNCTION extract_pdf(file_path STRING)
 RETURNS STRING
 LANGUAGE PYTHON
 RUNTIME_VERSION = '3.10'
-PACKAGES = ('PyPDF2')
 HANDLER = 'handler'
+IMPORTS = ('@UNSTRUCTURED_DATA.PDF.PYTHON_LIBRARIES_STAGE/pypdf-3.17.4-py3-none-any.whl')
 AS
 $$
-import PyPDF2
+import pypdf
+from snowflake.snowpark.files import SnowflakeFile
 
-def handler(file):
-    if file is None:
-        return None
-
-    reader = PyPDF2.PdfReader(file)
-    text = []
-    for page in reader.pages:
-        text.append(page.extract_text() or "")
-    return "\n".join(text)
+def handler(file_path):
+    with SnowflakeFile.open(file_path, 'rb') as f:
+        reader = pypdf.PdfReader(f)
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        return text
 $$;
+
+
+
+
 
 
 CREATE OR REPLACE FUNCTION extract_pdf_text(file_bytes BINARY)
