@@ -8,7 +8,7 @@ use schema pdf;
 -- SHOW SCHEMAS LIKE 'PDF'
 
 /*--------------------------
-Create stage and load dome pdf files via snowsight
+Create stage and load some pdf files via snowsight
 --------------------------*/
 CREATE stage if not exists pdf_stage
   DIRECTORY = ( ENABLE = TRUE );

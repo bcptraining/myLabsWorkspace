@@ -29,25 +29,26 @@ select * from directory(@pdf_stage);  -- This adds: RELATIVE_PATH, ETAG and FILE
 
 
 /*--------------------------
-Create a table of pdf urls
+Create a table of pdf urls (uses the internal stage)
 --------------------------*/
-CREATE OR REPLACE TABLE pdf_files (
-    file_path STRING
-);
+-- CREATE OR REPLACE TABLE pdf_files (
+--     file_path STRING
+-- );
 
-INSERT INTO pdf_files
-SELECT 'pdf_stage/' || relative_path
-FROM DIRECTORY(@pdf_stage);
--- Confirm tge urls are available
+CREATE OR REPLACE TABLE pdf_files AS
+SELECT
+    relative_path AS file_name,
+    BUILD_SCOPED_FILE_URL(
+        '@UNSTRUCTURED_DATA.PDF.PDF_STAGE',
+        relative_path
+    ) AS pdf_url
+FROM DIRECTORY(@UNSTRUCTURED_DATA.PDF.PDF_STAGE)
+WHERE LOWER(relative_path) LIKE '%.pdf';
+
+
 select * from pdf_files;
 
-/*--------------------------
-Build scoped urls for extraction
---------------------------*/
-SELECT
-  relative_path,
-  BUILD_SCOPED_FILE_URL(@pdf_stage, relative_path) AS file_url
-FROM DIRECTORY(@pdf_stage);
+
 
 
 
