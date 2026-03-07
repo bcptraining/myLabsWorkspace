@@ -9,7 +9,7 @@ Confirm iternal stage PDF_STAGE was created
 show stages;
 
 /*--------------------------
-Create streamit app to load files, then manually load some files
+Create streamit app to load files into internal stage 
 --------------------------*/
 
 import streamlit as st
