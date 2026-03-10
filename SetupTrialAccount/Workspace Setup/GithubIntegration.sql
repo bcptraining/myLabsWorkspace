@@ -1,4 +1,4 @@
-create or replace api integration udemymc0
+create or replace api integration myLabsWorkspace
     api_provider = git_https_api
     api_allowed_prefixes = ('https://github.com/bcptraining/myLabsWorkspace/')
     enabled = true
