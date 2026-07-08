@@ -49,7 +49,7 @@ WHERE TABLE_NAME = 'SALES'
   );
 
 
--- The above scruipt had issues with the variable substitution in the IN clause.
+-- The above script had issues with the variable substitution in the IN clause.
 -- Here is a revised version to avoid the issues: 
 SELECT VALUE::STRING AS FILE_NAME
 FROM TABLE(FLATTEN(INPUT => ARRAY_CONSTRUCT('sales1.csv','sales2.csv')));
