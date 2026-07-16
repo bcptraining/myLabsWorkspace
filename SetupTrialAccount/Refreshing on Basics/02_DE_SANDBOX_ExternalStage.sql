@@ -24,7 +24,7 @@ CREATE or alter  STAGE loadingdatalabs_json_stage
 list @loadingdatalabs_json_stage;
 
 /* ----------------------------------------
-Exploration
+Explore Stage
 ---------------------------------------- */
 -- CREATE OR REPLACE FILE FORMAT json_ff TYPE = JSON;
 CREATE OR REPLACE FILE FORMAT json_strip_array_ff

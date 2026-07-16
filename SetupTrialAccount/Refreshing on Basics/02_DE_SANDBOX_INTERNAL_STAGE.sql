@@ -23,6 +23,8 @@ CREATE TEMPORARY FILE FORMAT temp_parquet_format TYPE = PARQUET;
 Explore internal stage
 ---------------------------------------- */
 show stages;
+create stage stage2;
+ 
 list @employees;
 SELECT * FROM TABLE(INFER_SCHEMA(LOCATION => '@DE_SANDBOX.QUICK_REFRESHER.EMPLOYEES', FILE_FORMAT => 'DE_SANDBOX.QUICK_REFRESHER.TEMP_PARQUET_FORMAT', IGNORE_CASE => TRUE));
 SELECT * FROM @DE_SANDBOX.QUICK_REFRESHER.EMPLOYEES (FILE_FORMAT => 'DE_SANDBOX.QUICK_REFRESHER.TEMP_PARQUET_FORMAT') LIMIT 10;
@@ -44,25 +46,10 @@ CREATE TABLE IF NOT EXISTS DE_SANDBOX.QUICK_REFRESHER.employee_pq
     ))
   );
 
--- -- Optional: quarantine table for rejected ROWS
--- CREATE TABLE employee_pq_quarantine (
---     row_number NUMBER,
---     error VARCHAR,
---     error_line NUMBER,
---     error_column VARCHAR,
---     error_code NUMBER,
---     raw_line VARCHAR
--- );
 
 COPY INTO employee_pq FROM @EMPLOYEES FILE_FORMAT = 'temp_parquet_format' 
     MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
-    ON_ERROR = 'CONTINUE'
-    VALIDATION_MODE = 'RETURN_ERRORS';
-  -- have orchestrator manage quarantine loop  
-
-
-
--- See status of the load
+    ON_ERROR = 'SKIP_FILE';
 
 
 /* ----------------------------------------
@@ -70,7 +57,9 @@ Explore employee_pq
 ---------------------------------------- */
 
 select * from employee_pq; --  limit 10;
-
+-- SELECT COUNT(*), DEPARTMENT_ID 
+-- FROM employee_pq as employee_cnt
+-- GROUP BY DEPARTMENT_ID;
 /* ----------------------------------------
 Create proc to remove processed files from the internal stage
 ---------------------------------------- */
